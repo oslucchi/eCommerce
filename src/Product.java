@@ -1,10 +1,7 @@
-import java.util.StringTokenizer;
-import java.util.regex.Pattern;
 
 
 public class Product 
 {
-	private String fieldsDelimiter = Character.toString((char) 1);
 	private int id;
 	public String artist = "";
 	public String title = "";
@@ -13,6 +10,7 @@ public class Product
 	public String category = "";
 	public float price = 0.0f;
 	public boolean selected = false;
+	public String clientNote = "";
 	
 	public String getImagePathSmall()
 	{

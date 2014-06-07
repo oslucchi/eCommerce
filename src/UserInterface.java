@@ -2,16 +2,14 @@
 
 import java.awt.BorderLayout;
 import java.awt.Container;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
@@ -21,19 +19,17 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
-import javax.swing.ComboBoxModel;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
-import javax.swing.JFileChooser;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -41,16 +37,8 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.JTable;
 import javax.swing.JTextField;
-import javax.swing.event.PopupMenuEvent;
-import javax.swing.event.PopupMenuListener;
-import javax.swing.table.TableColumnModel;
-import javax.swing.text.*;
-
-import com.sun.j3d.utils.geometry.Box;
 
 public class UserInterface extends JFrame 
 						   implements ActionListener, WindowStateListener, 
@@ -76,7 +64,7 @@ public class UserInterface extends JFrame
 
     private JButton previousPage = new JButton("<");
     private JButton nextPage = new JButton(">");
-    private JButton addToCart = new JButton("add to cart");
+    private JButton showCart = new JButton("Show cart");
 	String[] choiches = {"category", "price"};
     JComboBox comboBox = new JComboBox(choiches);
     JLabel comboBoxLab = new JLabel("Sort by:");
@@ -95,7 +83,7 @@ public class UserInterface extends JFrame
 	@Override
 	public void actionPerformed(ActionEvent e) 
 	{
-		if (e.getActionCommand().compareTo("add to cart") == 0)
+		if (e.getActionCommand().compareTo("Select to buy") == 0)
 		{
 			for(int i = 0; i < itemListContainer.getComponentCount(); i++)
 			{
@@ -116,8 +104,11 @@ public class UserInterface extends JFrame
 							itemSelected.selected = false;
 						}
 					}
-					String idInCart = "";
+					
+					String idInCart = "|";
 					DoubleLinkedList temp = productsList;
+					temp.first();
+					showCart.setEnabled(false);
 					while(temp != null)
 					{
 						if ((itemSelected = (Product) temp.current()) == null)
@@ -125,10 +116,44 @@ public class UserInterface extends JFrame
 						if (itemSelected.selected)
 						{
 							idInCart += String.valueOf(itemSelected.getId()) + "|";
+							showCart.setEnabled(true);
 						}
 						temp.next();
 					}
-					// TODO: Salvare lista su file
+					FileOutputStream fop = null;
+					try 
+					{
+						File file = new File("data/cart.dat");
+						fop = new FileOutputStream(file);
+						// if file doesnt exists, then create it
+						if (!file.exists()) 
+						{
+							file.createNewFile();
+						}
+						// get the content in bytes
+						byte[] contentInBytes = idInCart.getBytes();
+						fop.write(contentInBytes);
+						fop.flush();
+						fop.close();
+					}
+					catch (IOException ex) 
+					{
+						// TODO: generate popup error message
+					} 
+					finally 
+					{
+						try 
+						{
+							if (fop != null) 
+							{
+								fop.close();
+							}
+						} 
+						catch (IOException ex) 
+						{
+							;
+						}
+					}
 					break;
 				}
 			}
@@ -191,6 +216,27 @@ public class UserInterface extends JFrame
 	        break;
 		}	
 	}
+	
+	private JPanel cartElement(Product node)
+	{
+		JPanel itemInCart = new JPanel();
+		itemInCart.setLayout(new GridLayout(1, 4));
+		BufferedImage img = null;
+		try 
+		{
+			img = ImageIO.read(new File(node.getImagePathSmall()));
+		} 
+		catch (IOException e) 
+		{
+			// TODO: Deal with the exception
+		}
+		itemInCart.add(new JLabel(new ImageIcon(img)));
+		itemInCart.add(new JLabel(node.title));
+		itemInCart.add(new JLabel(String.valueOf(node.price)));
+		itemInCart.add(new JTextField());
+		itemInCart.setName(String.valueOf(node.getId()));
+		return itemInCart;
+	}
 
 	@Override
 	public void mouseClicked(MouseEvent arg0) 
@@ -213,9 +259,32 @@ public class UserInterface extends JFrame
 				listScroller.repaint();
 			}
 		}
-		else if (arg0.getComponent().getName().compareTo("toBeAdded") == 0)
+		else if (arg0.getComponent().getName().compareTo("showCart") == 0)
 		{
-			//TODO
+		    JDialog cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
+		    cart.setTitle("cart");
+		    cart.setLayout(new BorderLayout());
+
+		    JPanel cartCont = new JPanel();
+		    cartCont.setLayout(new BoxLayout(cartCont, BoxLayout.PAGE_AXIS));
+		    DoubleLinkedList selected = productsList;
+		    selected.first();
+		    Product node = null;
+		    
+		    while((node = (Product) selected.current()) != null)
+		    {
+		    	if (node != null && node.selected)
+		    	{
+				    cartCont.add(cartElement(node));
+		    	}
+		    	selected.next();
+		    }
+		    JScrollPane scroller = new JScrollPane();
+		    scroller.setViewportView(cartCont);
+		    cart.add(scroller, BorderLayout.NORTH);
+		    cart.add(new JButton("Checkout"), BorderLayout.SOUTH);
+		    cart.setSize(400, 700);
+		    cart.setVisible(true);
 		}
 		else
 		{
@@ -272,6 +341,34 @@ public class UserInterface extends JFrame
     	boolean noRecordsFound = true;
     	BufferedReader br = null; 
 
+    	// Read ids contained in cart from cart file
+		File file = new File("data/cart.dat");
+		FileInputStream fis = null;
+		String idInCart = "";
+		try {
+			fis = new FileInputStream(file);
+ 			byte[] content = new byte[fis.available()];
+			if (fis.read(content, 0, fis.available()) != -1) 
+			{
+				idInCart = new String(content);
+			}
+		} 
+		catch (IOException e) 
+		{
+			e.printStackTrace();
+		}
+		finally 
+		{
+			try 
+			{
+				if (fis != null)
+					fis.close();
+			}
+			catch (IOException ex) 
+			{
+				ex.printStackTrace();
+			}
+		}
     	productsList = new DoubleLinkedList();
     	try
     	{
@@ -284,9 +381,10 @@ public class UserInterface extends JFrame
 				try 
 				{
 					Product p = new Product(record);
-					if (p.getId() in stringa contenuto carrello)
+					if (idInCart.contains("|" + String.valueOf(p.getId()) + "|"))
 					{
 						p.selected = true;
+						showCart.setEnabled(true);
 					}
 					productsList.insertTail(p);
 				}
@@ -402,14 +500,14 @@ public class UserInterface extends JFrame
         commandsContainer.add(comboBox);
         commandsContainer.add(previousPage);
         commandsContainer.add(nextPage);
-        commandsContainer.add(addToCart);
+        commandsContainer.add(showCart);
         nextPage.addMouseListener(this);
         nextPage.setName("next");
         previousPage.addMouseListener(this);
         previousPage.setName("prev");
         previousPage.setEnabled(false);
-        addToCart.setEnabled(false);
-        addToCart.setName("toBeAdded");
+        showCart.setName("showCart");
+        showCart.addMouseListener(this);
         frameLeftSide.setLayout(new BorderLayout());
         frameLeftSide.add(commandsContainer, BorderLayout.NORTH);
         frameLeftSide.add(listScroller, BorderLayout.CENTER);
@@ -434,12 +532,12 @@ public class UserInterface extends JFrame
 	
 	public JPanel listElement(Product node, int position)
 	{
-		JLabel title = new JLabel(node.title);
-		JLabel artist = new JLabel(node.artist);
-		JLabel category = new JLabel(node.category);
+		JLabel title = new JLabel("Title: " + node.title);
+		JLabel artist = new JLabel("Artist: " + node.artist);
+		JLabel category = new JLabel("Category: " + node.category);
 		JLabel descriptionShort = new JLabel(node.descriptionShort);
-		JLabel price = new JLabel(String.valueOf(node.price));
-		JCheckBox checkBox = new JCheckBox("add to cart");
+		JLabel price = new JLabel(String.valueOf("Price: " + node.price));
+		JCheckBox checkBox = new JCheckBox("Select to buy");
 		checkBox.setName("cb" + node.getId());
 		checkBox.addActionListener(this);
 		if (node.selected)
@@ -447,11 +545,13 @@ public class UserInterface extends JFrame
 			checkBox.setSelected(true);
 		}
 		BufferedImage img = null;
-		try {
+		try 
+		{
 			img = ImageIO.read(new File(node.getImagePathSmall()));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} 
+		catch (IOException e) 
+		{
+			// TODO: Deal with the exception
 		}
 		ImageIcon icon = new ImageIcon(img);
 		JLabel image = new JLabel(icon);
@@ -459,7 +559,7 @@ public class UserInterface extends JFrame
 		JPanel leftPart = new JPanel();
 		JPanel rightPart = new JPanel();
 		
-		rightPart.setLayout(new GridLayout(5,1));
+		rightPart.setLayout(new GridLayout(6,1));
 		leftPart.add(image);
 		rightPart.add(title);
 		rightPart.add(artist);
