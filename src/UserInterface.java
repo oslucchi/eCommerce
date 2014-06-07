@@ -16,6 +16,7 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -63,6 +64,8 @@ public class UserInterface extends JFrame
 	private Container frameCont = this.getContentPane();
 
 	private int statUserIndx = -1;
+	
+	DoubleLinkedList productsList = null, currentPage = null;
 
 	@Override
 	public void windowStateChanged(WindowEvent e) 
@@ -211,7 +214,67 @@ public class UserInterface extends JFrame
 	public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
 		// TODO Auto-generated method stub
 		
-	}	
+	}
+	
+	private void loadFile() throws InternalExceptions
+	{
+        String exception = null;
+        int errorCode = -1;
+    	boolean noRecordsFound = true;
+    	BufferedReader br = null; 
+
+    	productsList = new DoubleLinkedList();
+    	try
+    	{
+    		FileInputStream in = new FileInputStream("data/products.dat");
+    		br = new BufferedReader(new InputStreamReader(in));
+        	String record = "";
+    		while((record = br.readLine())!= null)
+    		{
+ 				noRecordsFound = false;
+				try 
+				{
+					Product p = new Product(record);
+					productsList.insertTail(p);
+				}
+				catch (InternalExceptions e) 
+				{
+					exception = "Record malformed reading prodcuts ('" + record.substring(0,  15) + "....'";
+					errorCode = InternalExceptions.ERR_MALFORMED_RECORD;
+					break;
+				}
+       		}
+		}
+		catch (FileNotFoundException e) 
+		{
+			exception = "Products file not found";
+			errorCode = InternalExceptions.ERR_PRODUCTS_FILE_NOT_FOUND;
+		}
+    	catch (IOException e) 
+    	{
+			exception = "I/O exception on loading products (" + e.getMessage() + ")";
+			errorCode = InternalExceptions.ERR_EXTERNAL;
+    	}
+
+		try
+		{
+			br.close();
+		}
+		catch(Exception e)
+		{
+			// TODO: Log the error somewere
+			;
+		}
+
+		if (noRecordsFound)
+		{
+			exception = "File corrupted or malformed. No records found";
+			errorCode = InternalExceptions.ERR_MALFORMED_RECORD;
+		}
+		
+		if (exception != null)
+			throw new InternalExceptions(exception, errorCode);
+	}
 
 	private void drawGrid()
 	{
@@ -320,45 +383,17 @@ public class UserInterface extends JFrame
         this.setSize(WIDTH / 2, HEIGHT / 2);
         this.setLocation(WIDTH / 4, WIDTH / 4);
         
-        BufferedReader buffer = null;
-		try
-		{
-			buffer = new BufferedReader(new FileReader("data/products.dat"));
-	    	int c = 0;
-	    	String record = "";
-	    	DoubleLinkedList products = new DoubleLinkedList();
-    		while((c = buffer.read()) != -1) 
-    		{
-    			char character = (char) c;
-    			if (character == (char) 2)
-    			{
-    				try 
-    				{
-						Product p = new Product(record);
-						products.insertTail(p);
-					}
-    				catch (InternalExceptions e) 
-    				{
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-    				record = "";
-    			}
-    			else
-    			{
-    				record += character;
-    			}
-       		}
-		}
-		catch (FileNotFoundException e) 
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-    	catch (IOException e) 
-    	{
-    		// TODO Auto-generated catch block
-    		e.printStackTrace();
-    	}
+        try
+        {
+        	loadFile();
+        }
+        catch(InternalExceptions e)
+        {
+        	Object[] options = { "Exit program" };
+        	JOptionPane.showOptionDialog(null, e.getMessage(), "Error",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE,
+                    null, options, options[0]);
+			System.exit(0);
+        }
 	}
 }

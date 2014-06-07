@@ -3,7 +3,9 @@
 public class InternalExceptions extends Exception 
 {
 	private static final long serialVersionUID = -8166519137963232242L;
+	public static final int ERR_EXTERNAL = -11;
 	public static final int ERR_MALFORMED_RECORD = 1;
+	public static final int ERR_PRODUCTS_FILE_NOT_FOUND = 2;
 
 	private String errorDescription;
 	private int errorCode = 0;
