@@ -15,16 +15,20 @@ public class Product
 	
 	public String getImagePathSmall()
 	{
-		String path = String.format("images/03dS.jpg", id);
+		String path = String.format("images/%03dS.jpg", id);
 		return path;
 	}
 	
 	public String getImagePathLarge()
 	{
-		String path = String.format("images/03dL.jpg", id);
+		String path = String.format("images/%03dL.jpg", id);
 		return path;
 	}
 		
+	public int getId() {
+		return id;
+	}
+
 	public Product(int id, String artist, String title, String category, float price, String descriptionShort, String descriptionLong)
 	{
 		this.id = id;

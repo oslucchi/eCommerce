@@ -3,6 +3,8 @@
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -14,6 +16,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,8 +25,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
+import javax.swing.ComboBoxModel;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -33,14 +41,19 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.table.TableColumnModel;
+import javax.swing.text.*;
+
+import com.sun.j3d.utils.geometry.Box;
 
 public class UserInterface extends JFrame 
-						   implements KeyListener, FocusListener, ActionListener, WindowStateListener, 
-						   			  MouseListener, PopupMenuListener
+						   implements ActionListener, WindowStateListener, 
+						   			  MouseListener
 {
 
 	/**
@@ -51,20 +64,22 @@ public class UserInterface extends JFrame
     static private final int FILEEXIT = 3;
     static private final int ABOUT = 4;
     
-    private String srcPath = null;
+    String srcPath = null;
     
     private Object[] sourceObj = new Object[10];
-    
-    private JButton predBtn = new JButton("Predict");
-    private JButton chgBtn = new JButton("Change");
-	private JTable grid = null;
-	private JPopupMenu popUp = null; 
-	private JLabel popupMenuName = new JLabel();
+    JPanel frameLeftSide = new JPanel();
+    JPanel frameRightSide = new JPanel();
+    JPanel itemListContainer = new JPanel();
+    JScrollPane listScroller = new JScrollPane();
+
+    private JButton previousPage = new JButton("<");
+    private JButton nextPage = new JButton(">");
+	String[] choiches = {"category", "price"};
+    JComboBox comboBox = new JComboBox(choiches);
+    JLabel comboBoxLab = new JLabel("Sort by:");
 
 	private Container frameCont = this.getContentPane();
 
-	private int statUserIndx = -1;
-	
 	DoubleLinkedList productsList = null, currentPage = null;
 
 	@Override
@@ -72,12 +87,6 @@ public class UserInterface extends JFrame
 	{
 		if (e.getNewState() == WindowEvent.WINDOW_CLOSED)
 			System.exit(0);
-	}
-
-	@Override
-	public void focusGained(FocusEvent arg0) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
@@ -127,42 +136,50 @@ public class UserInterface extends JFrame
 	}
 
 	@Override
-	public void focusLost(FocusEvent arg0) 
-	{
-		// Get the name of the component for which focus has been lost
-		String compName = arg0.getComponent().getName();
-	}
-	
-	@Override
-	public void keyTyped(KeyEvent arg0) 
-	{
-		// Only digits, Delete and Backspace are allowed in TextFields
-		
-		if ((arg0.getKeyChar() != KeyEvent.VK_DELETE) &&
-			(arg0.getKeyChar() != KeyEvent.VK_BACK_SPACE))
-		{
-			if ((arg0.getKeyChar() < '0') || (arg0.getKeyChar() > '9'))
-			{
-				JOptionPane.showMessageDialog(this, "Only digits are allowed in this field");
-			    arg0.consume();
-				return;
-			}
-		}
-	}
-	
-	@Override
-	public void keyReleased(KeyEvent arg0) 
-	{
-	}
-	
-	@Override
-	public void keyPressed(KeyEvent arg0)
-	{
-	}
-
-	@Override
 	public void mouseClicked(MouseEvent arg0) 
 	{
+		if (arg0.getComponent().getName().compareTo("next") == 0)
+		{
+			if (productsList.hasNextPage())
+			{
+				currentPage = productsList.getNextPage();
+				drawItemList();
+				listScroller.repaint();
+			}
+		}
+		else if (arg0.getComponent().getName().compareTo("prev") == 0)
+		{
+			if (productsList.hasPrevPage())
+			{
+				currentPage = productsList.getPrevPage();
+				drawItemList();
+				listScroller.repaint();
+			}
+		}
+		else
+		{
+			int i = Integer.parseInt(arg0.getComponent().getName());
+			Product p = (Product) currentPage.get(i);
+			System.out.println(p.getId() + " " + p.title + " '" + p.descriptionLong);			
+		}
+
+		if (productsList.hasPrevPage())
+		{
+			previousPage.setEnabled(true);
+		}
+		else
+		{
+			previousPage.setEnabled(false);
+		}
+		if (productsList.hasNextPage())
+		{
+			nextPage.setEnabled(true);
+		}
+		else
+		{
+			nextPage.setEnabled(false);
+		}
+
 	}
 
 	@Override
@@ -178,17 +195,6 @@ public class UserInterface extends JFrame
 	@Override
 	public void mousePressed(MouseEvent arg0) 
 	{
-		if (arg0.isPopupTrigger())
-		{
-			// Get the row on which the mouse was pressed and associate to the statistic user index var
-			statUserIndx = grid.rowAtPoint(arg0.getPoint());
-			grid.setRowSelectionInterval(statUserIndx, statUserIndx);
-			
-			// Set the menu label accordingly with the selected user
-			((JLabel) popUp.getComponent(popUp.getComponentIndex(popupMenuName)))
-				.setText("Statistic menu for user " + statUserIndx);
-			popUp.show(arg0.getComponent(), arg0.getX(), arg0.getY());
-		}
 	}
 
 	@Override
@@ -198,24 +204,7 @@ public class UserInterface extends JFrame
 		
 	}
 
-	@Override
-	public void popupMenuCanceled(PopupMenuEvent e) 
-	{
-		grid.clearSelection();
-	}
 
-	@Override
-	public void popupMenuWillBecomeInvisible(PopupMenuEvent e) 
-	{
-		grid.clearSelection();
-	}
-
-	@Override
-	public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-	
 	private void loadFile() throws InternalExceptions
 	{
         String exception = null;
@@ -262,7 +251,7 @@ public class UserInterface extends JFrame
 		}
 		catch(Exception e)
 		{
-			// TODO: Log the error somewere
+			// TODO: Log the error somewhere
 			;
 		}
 
@@ -275,33 +264,39 @@ public class UserInterface extends JFrame
 		if (exception != null)
 			throw new InternalExceptions(exception, errorCode);
 	}
-
-	private void drawGrid()
-	{
-		// this method is used both to re-draw after a save or to draw a new table
-		// after a load. Because the newly loaded matrix could be of different size
-		// compared to the previously loaded, if the application had already instantiated 
-		// a grid it has to be removed from the panel before we create the new one.
-		if (grid != null)
-			frameCont.remove(grid);
-
-		// Create the new grid, set the renderer for cell coloring and add to the container
-		grid.setRowHeight(20);
-		grid.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-		grid.addMouseListener(this);
-		grid.setEnabled(false);
-        frameCont.add(grid, BorderLayout.CENTER);
-
-        // Fill grid with items. Elements of the grid will be Ratings. This class has a type
-        // and a value. The coloring is decided based on the type
-		TableColumnModel cModel = grid.getColumnModel();
-		
-		// Populate matrix with data. The Rating type is assigned to each item based
-		// on the value source		
-	}
 	
+	private void drawItemList()
+	{
+		itemListContainer.removeAll();
+		
+        Product p = (Product) currentPage.first();
+        int count = 0;
+        while(p != null)
+        {
+        	itemListContainer.add(listElement(p, count++));
+        	p = (Product) currentPage.next();
+        }
+        itemListContainer.repaint();
+        listScroller.repaint();
+	}
+
 	public UserInterface(String srcPath)
 	{
+        try
+        {
+        	loadFile();
+        }
+        catch(InternalExceptions e)
+        {
+        	Object[] options = { "Exit program" };
+        	JOptionPane.showOptionDialog(null, e.getMessage(), "Error",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE,
+                    null, options, options[0]);
+			System.exit(0);
+        }
+        productsList.initPageManager(10);
+        currentPage = productsList.getNextPage();
+
 		this.srcPath = srcPath;
 		
 		setTitle("eCommerce");
@@ -323,50 +318,36 @@ public class UserInterface extends JFrame
         jmb.add(mFile);
         jmb.add(mAbout);
         jmb.add(mDummy);
+        
         frameCont.add(jmb, BorderLayout.NORTH);
-
-        // PopUp menu for top 4 recommendations and pearson correlation
-        popUp = new JPopupMenu();
-		popUp.add(popupMenuName);
-		popUp.add(new JLabel(" "));
-		JMenuItem topRecom = new JMenuItem("Top 4 Recommandation");
-		topRecom.setMnemonic(KeyEvent.VK_T);
-		topRecom.addActionListener(this);
-		popUp.add(topRecom);
-		JMenuItem pearCorr = new JMenuItem("Pearson correlation");
-		pearCorr.setMnemonic(KeyEvent.VK_P);
-		pearCorr.addActionListener(this);
-		popUp.add(pearCorr);
-		popUp.addPopupMenuListener(this);
- 
-        JPanel subPanel = new JPanel();
         
-        frameCont.add(subPanel, BorderLayout.EAST);
-        subPanel.setLayout(new BoxLayout(subPanel, BoxLayout.Y_AXIS));
         
-        // Adding buttons for user action. The current class implements actionListener
-        // an actionPerformed method is provided to handle the button pressed event
-        subPanel.add(predBtn);
-        subPanel.add(chgBtn);
+        // Container for left side of the screen:
+        // - container for sort type selector, move to previous and next page (NORTH)
+        // - scroll container for container of list of products (CENTER)
+        itemListContainer.setLayout(new BoxLayout(itemListContainer, BoxLayout.PAGE_AXIS));
+        itemListContainer.setAlignmentX(LEFT_ALIGNMENT);
+        drawItemList();
+        // listScroller = new JScrollPane(itemListContainer);
+        // listScroller.setAlignmentX(JScrollPane.LEFT_ALIGNMENT);
+        listScroller.setViewportView(itemListContainer);
+
+        JPanel commandsContainer = new JPanel();
+        commandsContainer.add(comboBoxLab);
+        commandsContainer.add(comboBox);
+        commandsContainer.add(previousPage);
+        commandsContainer.add(nextPage);
+     
+        nextPage.addMouseListener(this);
+        nextPage.setName("next");
+        previousPage.addMouseListener(this);
+        previousPage.setName("prev");
+        previousPage.setEnabled(false);
         
-
-        //Examples
-        // Add text input a name to identify which control is sending the event in 
-        // the even listener above
-        // chgItemRow.setName("row");
-
-        // Add key and focus listeners to input text fields to control user input 
-        // chgItemRow.addKeyListener(this);
-		// chgItemRow.addFocusListener(this);
-		       
-        predBtn.addActionListener(this);
-		chgBtn.addActionListener(this);
-
-		// disable action and input components by default.
-		// they will be enable once the first file is loaded
-        chgBtn.setEnabled(false);
-        predBtn.setEnabled(false);
-        
+        frameLeftSide.setLayout(new BorderLayout());
+        frameLeftSide.add(commandsContainer, BorderLayout.NORTH);
+        frameLeftSide.add(listScroller, BorderLayout.CENTER);
+        frameCont.add(frameLeftSide, BorderLayout.WEST);
         // All objects having actionPerformed event associated are listed in an 
         // array in order to determine which is the source of the current handled action
         // in the actionPerformed method above
@@ -381,19 +362,42 @@ public class UserInterface extends JFrame
         // Setup the frame accordingly
         // This is assuming you are extending the JFrame //class
         this.setSize(WIDTH / 2, HEIGHT / 2);
-        this.setLocation(WIDTH / 4, WIDTH / 4);
-        
-        try
-        {
-        	loadFile();
-        }
-        catch(InternalExceptions e)
-        {
-        	Object[] options = { "Exit program" };
-        	JOptionPane.showOptionDialog(null, e.getMessage(), "Error",
-                    JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE,
-                    null, options, options[0]);
-			System.exit(0);
-        }
+        this.setLocation(WIDTH / 4, WIDTH / 4);        
 	}
+	
+	public JPanel listElement(Product node, int position)
+	{
+		JLabel title = new JLabel(node.title);
+		JLabel artist = new JLabel(node.artist);
+		JLabel category = new JLabel(node.category);
+		JLabel descriptionShort = new JLabel(node.descriptionShort);
+		JLabel price = new JLabel(String.valueOf(node.price));
+		BufferedImage img = null;
+		try {
+			img = ImageIO.read(new File(node.getImagePathSmall()));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		ImageIcon icon = new ImageIcon(img);
+		JLabel image = new JLabel(icon);
+		JPanel newElement = new JPanel();
+		JPanel leftPart = new JPanel();
+		JPanel rightPart = new JPanel();
+		rightPart.setLayout(new GridLayout(5,1));
+		leftPart.add(image);
+		rightPart.add(title);
+		rightPart.add(artist);
+		rightPart.add(category);
+		rightPart.add(descriptionShort);
+		rightPart.add(price);
+		newElement.add(leftPart);
+		newElement.add(rightPart);
+		newElement.setName(String.valueOf(position));
+		newElement.addMouseListener(this);
+		return newElement;
+		
+	}
+	
+        
 }

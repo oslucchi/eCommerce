@@ -140,7 +140,7 @@ public class DoubleLinkedList implements Serializable
 	 * Returns the data contained in the element before the current
 	 * If the previous element is root then returns null
 	 */
-	public Object before()
+	public Object prev()
 	{
 		if (current.getPrev() == root)
 		{
@@ -155,7 +155,7 @@ public class DoubleLinkedList implements Serializable
 	 * Returns the data contained in the element after the current
 	 * If the next element is root then returns null
 	 */
-	public Object after()
+	public Object next()
 	{
 		if (current.getNext() == root)
 		{
