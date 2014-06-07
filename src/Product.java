@@ -12,6 +12,7 @@ public class Product
 	public String descriptionLong = "";
 	public String category = "";
 	public float price = 0.0f;
+	public boolean selected = false;
 	
 	public String getImagePathSmall()
 	{

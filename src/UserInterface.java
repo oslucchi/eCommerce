@@ -31,6 +31,7 @@ import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -75,6 +76,7 @@ public class UserInterface extends JFrame
 
     private JButton previousPage = new JButton("<");
     private JButton nextPage = new JButton(">");
+    private JButton addToCart = new JButton("add to cart");
 	String[] choiches = {"category", "price"};
     JComboBox comboBox = new JComboBox(choiches);
     JLabel comboBoxLab = new JLabel("Sort by:");
@@ -93,6 +95,45 @@ public class UserInterface extends JFrame
 	@Override
 	public void actionPerformed(ActionEvent e) 
 	{
+		if (e.getActionCommand().compareTo("add to cart") == 0)
+		{
+			for(int i = 0; i < itemListContainer.getComponentCount(); i++)
+			{
+				JPanel item = (JPanel) ((JPanel) itemListContainer.getComponent(i)).getComponent(1);
+				JCheckBox cbItem = (JCheckBox) (item.getComponent(5));
+				if (e.getSource().equals(cbItem))
+				{
+					Product itemSelected = 
+							(Product) productsList.search(Integer.parseInt(cbItem.getName().substring(2)));
+					if (itemSelected != null)
+					{
+						if (cbItem.isSelected())
+						{
+							itemSelected.selected = true;
+						}
+						else
+						{
+							itemSelected.selected = false;
+						}
+					}
+					String idInCart = "";
+					DoubleLinkedList temp = productsList;
+					while(temp != null)
+					{
+						if ((itemSelected = (Product) temp.current()) == null)
+							break;
+						if (itemSelected.selected)
+						{
+							idInCart += String.valueOf(itemSelected.getId()) + "|";
+						}
+						temp.next();
+					}
+					// TODO: Salvare lista su file
+					break;
+				}
+			}
+			return;
+		}
 		String displayMsg = "";
 		// All objects having set an actionListener have been added to the sourceObj array
 		// we compare the source of the ActionEvent received with each element of the array
@@ -172,6 +213,10 @@ public class UserInterface extends JFrame
 				listScroller.repaint();
 			}
 		}
+		else if (arg0.getComponent().getName().compareTo("toBeAdded") == 0)
+		{
+			//TODO
+		}
 		else
 		{
 			int i = Integer.parseInt(arg0.getComponent().getName());
@@ -195,7 +240,6 @@ public class UserInterface extends JFrame
 		{
 			nextPage.setEnabled(false);
 		}
-
 	}
 
 	@Override
@@ -240,6 +284,10 @@ public class UserInterface extends JFrame
 				try 
 				{
 					Product p = new Product(record);
+					if (p.getId() in stringa contenuto carrello)
+					{
+						p.selected = true;
+					}
 					productsList.insertTail(p);
 				}
 				catch (InternalExceptions e) 
@@ -354,13 +402,14 @@ public class UserInterface extends JFrame
         commandsContainer.add(comboBox);
         commandsContainer.add(previousPage);
         commandsContainer.add(nextPage);
-     
+        commandsContainer.add(addToCart);
         nextPage.addMouseListener(this);
         nextPage.setName("next");
         previousPage.addMouseListener(this);
         previousPage.setName("prev");
         previousPage.setEnabled(false);
-        
+        addToCart.setEnabled(false);
+        addToCart.setName("toBeAdded");
         frameLeftSide.setLayout(new BorderLayout());
         frameLeftSide.add(commandsContainer, BorderLayout.NORTH);
         frameLeftSide.add(listScroller, BorderLayout.CENTER);
@@ -390,6 +439,13 @@ public class UserInterface extends JFrame
 		JLabel category = new JLabel(node.category);
 		JLabel descriptionShort = new JLabel(node.descriptionShort);
 		JLabel price = new JLabel(String.valueOf(node.price));
+		JCheckBox checkBox = new JCheckBox("add to cart");
+		checkBox.setName("cb" + node.getId());
+		checkBox.addActionListener(this);
+		if (node.selected)
+		{
+			checkBox.setSelected(true);
+		}
 		BufferedImage img = null;
 		try {
 			img = ImageIO.read(new File(node.getImagePathSmall()));
@@ -402,6 +458,7 @@ public class UserInterface extends JFrame
 		JPanel newElement = new JPanel();
 		JPanel leftPart = new JPanel();
 		JPanel rightPart = new JPanel();
+		
 		rightPart.setLayout(new GridLayout(5,1));
 		leftPart.add(image);
 		rightPart.add(title);
@@ -409,6 +466,7 @@ public class UserInterface extends JFrame
 		rightPart.add(category);
 		rightPart.add(descriptionShort);
 		rightPart.add(price);
+		rightPart.add(checkBox);
 		newElement.add(leftPart);
 		newElement.add(rightPart);
 		newElement.setName(String.valueOf(position));
@@ -417,5 +475,4 @@ public class UserInterface extends JFrame
 		
 	}
 	
-        
 }

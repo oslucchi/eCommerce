@@ -427,5 +427,19 @@ public class DoubleLinkedList implements Serializable
 			current = current.next;
 		}
 	}
+	
+	public Object search(int id)
+	{
+		DoubleLinkedListElement current = root.getNext();
+		while(current != root)
+		{
+			if (((Product) current.getData()).getId() == id)
+			{
+				return current.getData();
+			}
+			current = current.next;
+		}
+		return(null);
+	}
 
 }
