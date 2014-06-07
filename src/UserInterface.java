@@ -61,8 +61,9 @@ public class UserInterface extends JFrame
 	 */
 	private static final long serialVersionUID = 1L;
 	
-    static private final int FILEEXIT = 3;
-    static private final int ABOUT = 4;
+    static private final int FILEEXIT = 1;
+    static private final int ABOUT = 2;
+    static private final int COMBOSORT = 3;
     
     String srcPath = null;
     
@@ -131,7 +132,22 @@ public class UserInterface extends JFrame
 			}
 			JOptionPane.showMessageDialog(this, displayMsg);
 			break;
-			
+		
+		case COMBOSORT:
+	        String selectedItem = (String) comboBox.getSelectedItem();
+	        if(selectedItem.compareTo("category") == 0)
+	        {
+	           productsList.sort(0);
+	        }
+	        else
+	        {
+	        	productsList.sort(1);
+	        }
+	        productsList.initPageManager(10);
+	        currentPage = productsList.getNextPage();
+	        drawItemList();
+	        
+	        break;
 		}	
 	}
 
@@ -328,11 +344,12 @@ public class UserInterface extends JFrame
         itemListContainer.setLayout(new BoxLayout(itemListContainer, BoxLayout.PAGE_AXIS));
         itemListContainer.setAlignmentX(LEFT_ALIGNMENT);
         drawItemList();
-        // listScroller = new JScrollPane(itemListContainer);
-        // listScroller.setAlignmentX(JScrollPane.LEFT_ALIGNMENT);
+        listScroller.setAlignmentX(JScrollPane.LEFT_ALIGNMENT);
         listScroller.setViewportView(itemListContainer);
 
         JPanel commandsContainer = new JPanel();
+        comboBox.setActionCommand("combo");
+        comboBox.addActionListener(this);
         commandsContainer.add(comboBoxLab);
         commandsContainer.add(comboBox);
         commandsContainer.add(previousPage);
@@ -353,6 +370,7 @@ public class UserInterface extends JFrame
         // in the actionPerformed method above
         sourceObj[FILEEXIT] = fileExit;
         sourceObj[ABOUT] = mAbout;
+        sourceObj[COMBOSORT] = comboBox;
 
  		// grid.editCellAt(3, 5);
         Toolkit tk = Toolkit.getDefaultToolkit();

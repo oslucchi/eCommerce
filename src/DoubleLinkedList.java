@@ -61,6 +61,11 @@ public class DoubleLinkedList implements Serializable
 		{
 			return(data);
 		}
+		
+		private void setData(Object data)
+		{
+			this.data = data;
+		}
 	}
 
 	// DoubleLinkedList attributes
@@ -385,6 +390,42 @@ public class DoubleLinkedList implements Serializable
 		hasNextPage = true;
 		retList = getNextPage();
 		return(retList);
+	}
+	
+	private void swapNodes(DoubleLinkedListElement node1, DoubleLinkedListElement node2)
+	{
+		Object o = node1.getData();
+		node1.setData(node2.getData());
+		node2.setData(o);
+	}
+	
+	public void sort(int sortBy)
+	{
+		DoubleLinkedListElement current = root.getNext(), swap;
+		while(current.next != root)
+		{
+			swap = current.getNext();
+			while(swap.next != root)
+			{
+				if (sortBy == 0)
+				{
+					if (((Product) current.getData()).category.compareTo(
+							((Product) swap.getData()).category) > 0 )
+					{
+						swapNodes(current, swap);
+					}
+				}
+				else
+				{
+					if (((Product) current.getData()).price > ((Product) swap.getData()).price)
+					{
+						swapNodes(current, swap);
+					}			
+				}
+				swap = swap.next;
+			}
+			current = current.next;
+		}
 	}
 
 }
