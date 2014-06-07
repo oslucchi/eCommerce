@@ -14,13 +14,13 @@ public class Product
 	
 	public String getImagePathSmall()
 	{
-		String path = String.format("images/04d-s.jpg", id);
+		String path = String.format("images/03dS.jpg", id);
 		return path;
 	}
 	
-	public String getImagePathBig()
+	public String getImagePathLarge()
 	{
-		String path = String.format("images/04d-b.jpg", id);
+		String path = String.format("images/03dL.jpg", id);
 		return path;
 	}
 		
