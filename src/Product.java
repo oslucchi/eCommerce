@@ -1,16 +1,17 @@
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 
 public class Product 
 {
 	private String fieldsDelimiter = Character.toString((char) 1);
 	private int id;
-	public String artist;
-	public String title;
-	public String descriptionShort;
-	public String descriptionLong;
-	public String category;
-	public float price;
+	public String artist = "";
+	public String title = "";
+	public String descriptionShort = "";
+	public String descriptionLong = "";
+	public String category = "";
+	public float price = 0.0f;
 	
 	public String getImagePathSmall()
 	{
@@ -38,29 +39,30 @@ public class Product
 	public Product(String record) throws InternalExceptions
 	{
 		
-		StringTokenizer st = new StringTokenizer(record, "|");
-		if (st.countTokens() != 7)
+		String fields[] = record.split("\\|");
+		if (fields.length != 7)
 		{
 			InternalExceptions e = new InternalExceptions();
 			e.setErrorCode(InternalExceptions.ERR_MALFORMED_RECORD);
 			e.setErrorDescription("Unable to parse record: '" + record.substring(0,15) + "...'");
 			throw e;
 		}
-		id = Integer.parseInt(st.nextToken());
-		title = st.nextToken();
-		artist = st.nextToken();
-		category = st.nextToken();
+		title = fields[1];
+		artist = fields[2];
+		category = fields[3];
 		
-		String priceStr = st.nextToken().trim();
+		String fieldOnErr = "Id";
 		try
 		{
-			price = Float.parseFloat(priceStr);
+			id = Integer.parseInt(fields[0]);
+			fieldOnErr = "Price";
+			price = Float.parseFloat(fields[4].trim() + "f");
 		}
 		catch(Exception e)
 		{
-			throw new InternalExceptions("Price format is incorrect (" + priceStr + ")", InternalExceptions.ERR_MALFORMED_RECORD);
+			throw new InternalExceptions(fieldOnErr + " format is incorrect (" + fields[4] + ")", InternalExceptions.ERR_MALFORMED_RECORD);
 		}
-		descriptionShort = st.nextToken();
-		descriptionLong = st.nextToken();
+		descriptionShort = fields[5];
+		descriptionLong = fields[6];
 	}
 }
