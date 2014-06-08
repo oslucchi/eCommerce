@@ -18,12 +18,15 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Date;
 
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
@@ -59,6 +62,8 @@ public class UserInterface extends JFrame
     static private final int PREVPAGE = 5;
     static private final int SHOWCART = 6;
     static private final int FILTER = 7;
+    static private final int CHECKOUT = 8;
+    static private final int ORDERHISTORY = 9;
     
     String srcPath = null;
     
@@ -67,18 +72,28 @@ public class UserInterface extends JFrame
     JPanel frameRightSide = new JPanel();
     JPanel itemListContainer = new JPanel();
     JPanel detailsContainer = new JPanel();
+    JPanel cartCont = new JPanel();
+    JPanel orderPanel = new JPanel();
     JScrollPane listScroller = new JScrollPane();
     JScrollPane detailsScroller = new JScrollPane();
+    JDialog cart;
+    JDialog orderHistory;
+    String[] howToPay = {"", "PayPal", "CreditCard"};
+
 
     private JButton previousPage = new JButton("<");
     private JButton nextPage = new JButton(">");
     private JButton showCart = new JButton("Show cart");
     private JButton filter = new JButton("Filter");
+    private JButton checkOut = new JButton("Checkout");
+    private JButton fileOrderHistory = new JButton ("Open Order Hystory");
     private JTextField filterText = new JTextField("", 15);
 	private String[] choiches = {"category", "price"};
     private JComboBox comboBox = new JComboBox(choiches);
     private JLabel comboBoxLab = new JLabel("Sort by:");
     private JTextField cartItemNote;
+    private JComboBox paymentMethod = new JComboBox(howToPay);
+    private JTextField nameOfBuyer = new JTextField("",25);
 
 	private Container frameCont = this.getContentPane();
 	
@@ -282,11 +297,11 @@ public class UserInterface extends JFrame
 			break;
 			
 		case SHOWCART:
-		    JDialog cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
+		    cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
 		    cart.setTitle("cart");
 		    cart.setLayout(new BorderLayout());
 
-		    JPanel cartCont = new JPanel();
+		    JPanel buttonPanel = new JPanel();
 		    cartCont.setLayout(new BoxLayout(cartCont, BoxLayout.PAGE_AXIS));
 		    DoubleLinkedList selected = filteredList;
 		    selected.first();
@@ -302,11 +317,20 @@ public class UserInterface extends JFrame
 		    }
 		    JScrollPane scroller = new JScrollPane();
 		    scroller.setViewportView(cartCont);
-		    cart.add(scroller, BorderLayout.NORTH);
-		    cart.add(new JButton("Checkout"), BorderLayout.SOUTH);
+		    JLabel textBoxName = new JLabel("Enter your Credentials ");
+		    JLabel paymentMethodLabel = new JLabel("Select payment Method ");
+		    buttonPanel.add(paymentMethodLabel);
+		    buttonPanel.add(paymentMethod);
+		    buttonPanel.add(textBoxName);
+		    buttonPanel.add(nameOfBuyer);
+		    buttonPanel.add(checkOut);
+		    
+		    cart.add(scroller, BorderLayout.NORTH);	 
+		    cart.add(buttonPanel, BorderLayout.SOUTH);
 		    cart.setSize(400, 700);
 		    cart.setVisible(true);
 		    break;
+		
 		
 		case FILTER:
 			filteredList = productsList.filter(filterText.getText());
@@ -316,7 +340,87 @@ public class UserInterface extends JFrame
 			nextPage.setEnabled(filteredList.hasNextPage());
 			drawItemList();
 			break;
-		}	
+		
+		case CHECKOUT:
+			String paymentMethodChoice = (String) paymentMethod.getSelectedItem();
+			String credentials = nameOfBuyer.getText();
+			Date date = new Date();
+			if ((paymentMethodChoice.compareTo("") != 0) && (credentials != null))
+			{
+		    	try
+		    	{
+		    		File file = new File("data/checkedoutOrdersHistory.txt");
+		 
+		    		if(!file.exists())
+		    		{
+		    			file.createNewFile();
+		    		}
+		 
+		    		// true = append file
+		    		FileWriter fileWriter = new FileWriter(file.getName(), true);
+	    	        BufferedWriter bufferWriter = new BufferedWriter(fileWriter);
+	    	        String line = "Order submitted on " + date + "\n";
+	    	        bufferWriter.write(line);
+	    	        line = "  User: " + credentials + " - Payment method " + paymentMethodChoice + "\n";
+	    	        bufferWriter.write(line);
+					for(int i = 0; i < cartCont.getComponentCount(); i ++)
+					{
+						int id = Integer.parseInt(((JPanel) cartCont.getComponent(i)).getName());
+						Product p = (Product) productsList.search(id);
+						line = "  Articolo " + p.getId() + " - Title " + p.title + " - Price " + p.price + "\n";
+						bufferWriter.write(line);
+						line = "  Client notes: \n" + p.clientNote + "\n\n";
+						bufferWriter.write(line);
+						// remove from virtual cart
+						p.selected = false;
+						p.clientNote = "";
+					}
+					bufferWriter.write("\n*********** END OF ORDER **********\n\n\n");
+					bufferWriter.flush();
+	    	        bufferWriter.close();
+		    	}
+		    	catch(IOException e1)
+		    	{
+		    		// TODO: hadnle exception{
+		    	}
+				idInCart = "|";
+				saveCartFile();
+				cartCont.removeAll();
+				cartCont.repaint();
+				cart.dispose();
+				filterText.setText("");
+				filteredList = productsList.filter("");
+				filteredList.initPageManager(10);
+				currentPage = filteredList.getNextPage();
+				showCart.setEnabled(false);
+				nextPage.setEnabled(filteredList.hasNextPage());
+				previousPage.setEnabled(filteredList.hasPrevPage());
+				drawItemList();
+			}
+			else
+			{
+				JOptionPane.showMessageDialog(null,"Please enter your credentials and select payment method");				
+			}
+			break;
+		case ORDERHISTORY:
+			orderHistory = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
+			orderHistory.setTitle("Order History");
+			orderHistory.setLayout(new BorderLayout());
+			orderPanel.setLayout(new BoxLayout(orderPanel, BoxLayout.PAGE_AXIS));
+			JScrollPane orderScroller = new JScrollPane();
+			orderScroller.setViewportView(orderPanel);
+			JLabel orders = new JLabel(" all orders made up to now");
+			orderPanel.add(orders);
+			orderHistory.add(orderScroller, BorderLayout.NORTH);	 
+		    orderHistory.add(orderPanel, BorderLayout.SOUTH);
+			System.out.println("file to be printed");
+			orderHistory.setSize(400, 700);
+			orderHistory.setVisible(true);
+			
+		
+		}
+		
+			
 	}
 	
 	private JPanel cartElement(Product node)
@@ -534,6 +638,12 @@ public class UserInterface extends JFrame
         fileExit.setMnemonic(KeyEvent.VK_E);
         fileExit.setName("exit");
         fileExit.addActionListener(this);
+        mFile.setMnemonic(KeyEvent.VK_F);
+        JMenuItem fileOrderHistory = new JMenuItem("Order History");
+        fileOrderHistory.setMnemonic(KeyEvent.VK_E);
+        fileOrderHistory.setName("Order History");
+        fileOrderHistory.addActionListener(this);
+        mFile.add(fileOrderHistory);
         mFile.add(fileExit);
         JMenuItem mAbout = new JMenuItem("About");
         mAbout.addActionListener(this);
@@ -576,6 +686,9 @@ public class UserInterface extends JFrame
         previousPage.setEnabled(filteredList.hasPrevPage());
         showCart.setName("showCart");
         showCart.addActionListener(this);
+        checkOut.setName("checkOut");
+        checkOut.addActionListener(this);
+        checkOut.setEnabled(true);
         frameLeftSide.setLayout(new BorderLayout());
         frameLeftSide.add(commandsContainer, BorderLayout.NORTH);
         frameLeftSide.add(listScroller, BorderLayout.CENTER);
@@ -600,6 +713,8 @@ public class UserInterface extends JFrame
         sourceObj[PREVPAGE] = previousPage;
         sourceObj[SHOWCART] = showCart;
         sourceObj[FILTER] = filter;
+        sourceObj[CHECKOUT] = checkOut;
+        sourceObj[ORDERHISTORY] = fileOrderHistory;
         
  		// grid.editCellAt(3, 5);
         Toolkit tk = Toolkit.getDefaultToolkit();
