@@ -86,7 +86,6 @@ public class UserInterface extends JFrame
     private JButton showCart = new JButton("Show cart");
     private JButton filter = new JButton("Filter");
     private JButton checkOut = new JButton("Checkout");
-    private JButton fileOrderHistory = new JButton ("Open Order Hystory");
     private JTextField filterText = new JTextField("", 15);
 	private String[] choiches = {"category", "price"};
     private JComboBox comboBox = new JComboBox(choiches);
