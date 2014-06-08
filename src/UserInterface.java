@@ -9,6 +9,8 @@ import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -42,7 +44,7 @@ import javax.swing.JTextField;
 
 public class UserInterface extends JFrame 
 						   implements ActionListener, WindowStateListener, 
-						   			  MouseListener
+						   			  MouseListener, FocusListener
 {
 
 	/**
@@ -53,6 +55,10 @@ public class UserInterface extends JFrame
     static private final int FILEEXIT = 1;
     static private final int ABOUT = 2;
     static private final int COMBOSORT = 3;
+    static private final int NEXTPAGE = 4;
+    static private final int PREVPAGE = 5;
+    static private final int SHOWCART = 6;
+    static private final int FILTER = 7;
     
     String srcPath = null;
     
@@ -60,19 +66,27 @@ public class UserInterface extends JFrame
     JPanel frameLeftSide = new JPanel();
     JPanel frameRightSide = new JPanel();
     JPanel itemListContainer = new JPanel();
+    JPanel detailsContainer = new JPanel();
     JScrollPane listScroller = new JScrollPane();
+    JScrollPane detailsScroller = new JScrollPane();
 
     private JButton previousPage = new JButton("<");
     private JButton nextPage = new JButton(">");
     private JButton showCart = new JButton("Show cart");
-	String[] choiches = {"category", "price"};
-    JComboBox comboBox = new JComboBox(choiches);
-    JLabel comboBoxLab = new JLabel("Sort by:");
+    private JButton filter = new JButton("Filter");
+    private JTextField filterText = new JTextField("", 15);
+	private String[] choiches = {"category", "price"};
+    private JComboBox comboBox = new JComboBox(choiches);
+    private JLabel comboBoxLab = new JLabel("Sort by:");
+    private JTextField cartItemNote;
 
 	private Container frameCont = this.getContentPane();
-
-	DoubleLinkedList productsList = null, currentPage = null;
-
+	
+	private String idInCart = "";
+	
+	DoubleLinkedList filteredList = null, currentPage = null;
+	DoubleLinkedList productsList = null;
+	
 	@Override
 	public void windowStateChanged(WindowEvent e) 
 	{
@@ -80,6 +94,45 @@ public class UserInterface extends JFrame
 			System.exit(0);
 	}
 
+	private void saveCartFile()
+	{
+		// Save the selected ids on file for restart handling
+		FileOutputStream fop = null;
+		try 
+		{
+			File file = new File("data/cart.dat");
+			fop = new FileOutputStream(file);
+			// if file doesnt exists, then create it
+			if (!file.exists()) 
+			{
+				file.createNewFile();
+			}
+			// get the content in bytes
+			byte[] contentInBytes = idInCart.getBytes();
+			fop.write(contentInBytes);
+			fop.flush();
+			fop.close();
+		}
+		catch (IOException ex) 
+		{
+			// TODO: generate popup error message
+		} 
+		finally 
+		{
+			try 
+			{
+				if (fop != null) 
+				{
+					fop.close();
+				}
+			} 
+			catch (IOException ex) 
+			{
+				;
+			}
+		}
+	}
+	
 	@Override
 	public void actionPerformed(ActionEvent e) 
 	{
@@ -92,9 +145,10 @@ public class UserInterface extends JFrame
 				if (e.getSource().equals(cbItem))
 				{
 					Product itemSelected = 
-							(Product) productsList.search(Integer.parseInt(cbItem.getName().substring(2)));
+							(Product) filteredList.search(Integer.parseInt(cbItem.getName().substring(2)));
 					if (itemSelected != null)
 					{
+						itemSelected.clientNote = "";
 						if (cbItem.isSelected())
 						{
 							itemSelected.selected = true;
@@ -104,9 +158,13 @@ public class UserInterface extends JFrame
 							itemSelected.selected = false;
 						}
 					}
+					int idActioned = itemSelected.getId();
+					boolean selected = itemSelected.selected;
 					
-					String idInCart = "|";
-					DoubleLinkedList temp = productsList;
+					// Prepare the list of selected ids to push to a file in order to 
+					// get the right checkbox selected status on restart
+					idInCart = "|";
+					DoubleLinkedList temp = filteredList;
 					temp.first();
 					showCart.setEnabled(false);
 					while(temp != null)
@@ -115,50 +173,34 @@ public class UserInterface extends JFrame
 							break;
 						if (itemSelected.selected)
 						{
-							idInCart += String.valueOf(itemSelected.getId()) + "|";
+							idInCart += String.valueOf(itemSelected.getId()) + "|**|";
 							showCart.setEnabled(true);
 						}
 						temp.next();
 					}
-					FileOutputStream fop = null;
-					try 
+					
+					// Mark on the original productsList the selected status on the actioned checkbox
+					// so that on next filtering the selected status will be preserved
+					temp = productsList;
+					temp.first();
+					while(temp != null)
 					{
-						File file = new File("data/cart.dat");
-						fop = new FileOutputStream(file);
-						// if file doesnt exists, then create it
-						if (!file.exists()) 
+						if (idActioned == ((Product) temp.current()).getId())
 						{
-							file.createNewFile();
+							((Product) temp.current()).selected = selected;
+							((Product) temp.current()).clientNote = "";
+							break;
 						}
-						// get the content in bytes
-						byte[] contentInBytes = idInCart.getBytes();
-						fop.write(contentInBytes);
-						fop.flush();
-						fop.close();
+						temp.next();
 					}
-					catch (IOException ex) 
-					{
-						// TODO: generate popup error message
-					} 
-					finally 
-					{
-						try 
-						{
-							if (fop != null) 
-							{
-								fop.close();
-							}
-						} 
-						catch (IOException ex) 
-						{
-							;
-						}
-					}
+
+					saveCartFile();
 					break;
 				}
 			}
 			return;
 		}
+		
 		String displayMsg = "";
 		// All objects having set an actionListener have been added to the sourceObj array
 		// we compare the source of the ActionEvent received with each element of the array
@@ -203,17 +245,77 @@ public class UserInterface extends JFrame
 	        String selectedItem = (String) comboBox.getSelectedItem();
 	        if(selectedItem.compareTo("category") == 0)
 	        {
-	           productsList.sort(0);
+	           filteredList.sort(0);
 	        }
 	        else
 	        {
-	        	productsList.sort(1);
+	        	filteredList.sort(1);
 	        }
-	        productsList.initPageManager(10);
-	        currentPage = productsList.getNextPage();
-	        drawItemList();
 	        
+	        filteredList.initPageManager(10);
+	        currentPage = filteredList.getNextPage();
+	        previousPage.setEnabled(filteredList.hasPrevPage());
+	        nextPage.setEnabled(filteredList.hasNextPage());
+	        drawItemList();	        
 	        break;
+	        	        
+		case NEXTPAGE:
+			if (filteredList.hasNextPage())
+			{
+				currentPage = filteredList.getNextPage();
+				drawItemList();
+				listScroller.repaint();
+			}
+			previousPage.setEnabled(filteredList.hasPrevPage());
+			nextPage.setEnabled(filteredList.hasNextPage());
+			break;
+			
+		case PREVPAGE:
+			if (filteredList.hasPrevPage())
+			{
+				currentPage = filteredList.getPrevPage();
+				drawItemList();
+				listScroller.repaint();
+			}
+			previousPage.setEnabled(filteredList.hasPrevPage());
+			nextPage.setEnabled(filteredList.hasNextPage());
+			break;
+			
+		case SHOWCART:
+		    JDialog cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
+		    cart.setTitle("cart");
+		    cart.setLayout(new BorderLayout());
+
+		    JPanel cartCont = new JPanel();
+		    cartCont.setLayout(new BoxLayout(cartCont, BoxLayout.PAGE_AXIS));
+		    DoubleLinkedList selected = filteredList;
+		    selected.first();
+		    Product node = null;
+		    
+		    while((node = (Product) selected.current()) != null)
+		    {
+		    	if (node != null && node.selected)
+		    	{
+				    cartCont.add(cartElement(node));
+		    	}
+		    	selected.next();
+		    }
+		    JScrollPane scroller = new JScrollPane();
+		    scroller.setViewportView(cartCont);
+		    cart.add(scroller, BorderLayout.NORTH);
+		    cart.add(new JButton("Checkout"), BorderLayout.SOUTH);
+		    cart.setSize(400, 700);
+		    cart.setVisible(true);
+		    break;
+		
+		case FILTER:
+			filteredList = productsList.filter(filterText.getText());
+			filteredList.initPageManager(10);
+			currentPage = filteredList.getNextPage();
+			previousPage.setEnabled(filteredList.hasPrevPage());
+			nextPage.setEnabled(filteredList.hasNextPage());
+			drawItemList();
+			break;
 		}	
 	}
 	
@@ -233,7 +335,10 @@ public class UserInterface extends JFrame
 		itemInCart.add(new JLabel(new ImageIcon(img)));
 		itemInCart.add(new JLabel(node.title));
 		itemInCart.add(new JLabel(String.valueOf(node.price)));
-		itemInCart.add(new JTextField());
+		cartItemNote = new JTextField(node.clientNote, 40);
+		cartItemNote.addFocusListener(this);
+		cartItemNote.setName(String.valueOf(node.getId()));
+		itemInCart.add(cartItemNote);
 		itemInCart.setName(String.valueOf(node.getId()));
 		return itemInCart;
 	}
@@ -241,74 +346,24 @@ public class UserInterface extends JFrame
 	@Override
 	public void mouseClicked(MouseEvent arg0) 
 	{
-		if (arg0.getComponent().getName().compareTo("next") == 0)
+		int i = Integer.parseInt(arg0.getComponent().getName());
+		Product p = (Product) currentPage.get(i);
+		BufferedImage img = null;
+		try 
 		{
-			if (productsList.hasNextPage())
-			{
-				currentPage = productsList.getNextPage();
-				drawItemList();
-				listScroller.repaint();
-			}
+			img = ImageIO.read(new File(p.getImagePathLarge()));
+		} 
+		catch (IOException e) 
+		{
+			// TODO: Deal with the exception
+			System.out.println("image " + p.getImagePathLarge() + " not found");
 		}
-		else if (arg0.getComponent().getName().compareTo("prev") == 0)
-		{
-			if (productsList.hasPrevPage())
-			{
-				currentPage = productsList.getPrevPage();
-				drawItemList();
-				listScroller.repaint();
-			}
-		}
-		else if (arg0.getComponent().getName().compareTo("showCart") == 0)
-		{
-		    JDialog cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
-		    cart.setTitle("cart");
-		    cart.setLayout(new BorderLayout());
+		detailsContainer.removeAll();
+		detailsContainer.add(new JLabel(new ImageIcon(img)), BorderLayout.NORTH);
+		detailsContainer.add(new JLabel(p.title), BorderLayout.CENTER);
+		detailsContainer.add(new JLabel(p.descriptionLong), BorderLayout.SOUTH);
 
-		    JPanel cartCont = new JPanel();
-		    cartCont.setLayout(new BoxLayout(cartCont, BoxLayout.PAGE_AXIS));
-		    DoubleLinkedList selected = productsList;
-		    selected.first();
-		    Product node = null;
-		    
-		    while((node = (Product) selected.current()) != null)
-		    {
-		    	if (node != null && node.selected)
-		    	{
-				    cartCont.add(cartElement(node));
-		    	}
-		    	selected.next();
-		    }
-		    JScrollPane scroller = new JScrollPane();
-		    scroller.setViewportView(cartCont);
-		    cart.add(scroller, BorderLayout.NORTH);
-		    cart.add(new JButton("Checkout"), BorderLayout.SOUTH);
-		    cart.setSize(400, 700);
-		    cart.setVisible(true);
-		}
-		else
-		{
-			int i = Integer.parseInt(arg0.getComponent().getName());
-			Product p = (Product) currentPage.get(i);
-			System.out.println(p.getId() + " " + p.title + " '" + p.descriptionLong);			
-		}
-
-		if (productsList.hasPrevPage())
-		{
-			previousPage.setEnabled(true);
-		}
-		else
-		{
-			previousPage.setEnabled(false);
-		}
-		if (productsList.hasNextPage())
-		{
-			nextPage.setEnabled(true);
-		}
-		else
-		{
-			nextPage.setEnabled(false);
-		}
+		frameCont.repaint();
 	}
 
 	@Override
@@ -344,7 +399,7 @@ public class UserInterface extends JFrame
     	// Read ids contained in cart from cart file
 		File file = new File("data/cart.dat");
 		FileInputStream fis = null;
-		String idInCart = "";
+		idInCart = "";
 		try {
 			fis = new FileInputStream(file);
  			byte[] content = new byte[fis.available()];
@@ -370,6 +425,7 @@ public class UserInterface extends JFrame
 			}
 		}
     	productsList = new DoubleLinkedList();
+		showCart.setEnabled(false);
     	try
     	{
     		FileInputStream in = new FileInputStream("data/products.dat");
@@ -385,6 +441,11 @@ public class UserInterface extends JFrame
 					{
 						p.selected = true;
 						showCart.setEnabled(true);
+						String id = "|" + String.valueOf(p.getId()) + "|";
+						int startOfNote = idInCart.lastIndexOf(id);
+						startOfNote += id.length() + 1;
+						int endOfNote = idInCart.indexOf("|", startOfNote) - 1;
+						p.clientNote = idInCart.substring(startOfNote, endOfNote);
 					}
 					productsList.insertTail(p);
 				}
@@ -425,6 +486,8 @@ public class UserInterface extends JFrame
 		
 		if (exception != null)
 			throw new InternalExceptions(exception, errorCode);
+		
+		filteredList = productsList.filter("");
 	}
 	
 	private void drawItemList()
@@ -456,8 +519,8 @@ public class UserInterface extends JFrame
                     null, options, options[0]);
 			System.exit(0);
         }
-        productsList.initPageManager(10);
-        currentPage = productsList.getNextPage();
+        filteredList.initPageManager(10);
+        currentPage = filteredList.getNextPage();
 
 		this.srcPath = srcPath;
 		
@@ -496,29 +559,48 @@ public class UserInterface extends JFrame
         JPanel commandsContainer = new JPanel();
         comboBox.setActionCommand("combo");
         comboBox.addActionListener(this);
+        filter.addActionListener(this);
         commandsContainer.add(comboBoxLab);
         commandsContainer.add(comboBox);
         commandsContainer.add(previousPage);
         commandsContainer.add(nextPage);
         commandsContainer.add(showCart);
-        nextPage.addMouseListener(this);
+        commandsContainer.add(new JLabel("Filter by: "));
+        commandsContainer.add(filterText);
+        commandsContainer.add(filter);
+        nextPage.addActionListener(this);
         nextPage.setName("next");
-        previousPage.addMouseListener(this);
+        nextPage.setEnabled(filteredList.hasNextPage());
+        previousPage.addActionListener(this);
         previousPage.setName("prev");
-        previousPage.setEnabled(false);
+        previousPage.setEnabled(filteredList.hasPrevPage());
         showCart.setName("showCart");
-        showCart.addMouseListener(this);
+        showCart.addActionListener(this);
         frameLeftSide.setLayout(new BorderLayout());
         frameLeftSide.add(commandsContainer, BorderLayout.NORTH);
         frameLeftSide.add(listScroller, BorderLayout.CENTER);
         frameCont.add(frameLeftSide, BorderLayout.WEST);
+        
+        detailsContainer.setLayout(new BorderLayout());
+        detailsScroller.setViewportView(detailsContainer);
+
+        frameRightSide.setLayout(new BorderLayout());
+        frameRightSide.add(detailsScroller, BorderLayout.CENTER);
+        frameRightSide.setMaximumSize(new Dimension(500, frameLeftSide.getHeight()));
+        frameCont.add(frameRightSide, BorderLayout.EAST);
+        
+
         // All objects having actionPerformed event associated are listed in an 
         // array in order to determine which is the source of the current handled action
         // in the actionPerformed method above
         sourceObj[FILEEXIT] = fileExit;
         sourceObj[ABOUT] = mAbout;
         sourceObj[COMBOSORT] = comboBox;
-
+        sourceObj[NEXTPAGE] = nextPage;
+        sourceObj[PREVPAGE] = previousPage;
+        sourceObj[SHOWCART] = showCart;
+        sourceObj[FILTER] = filter;
+        
  		// grid.editCellAt(3, 5);
         Toolkit tk = Toolkit.getDefaultToolkit();
         Dimension screenSize = tk.getScreenSize();
@@ -573,6 +655,30 @@ public class UserInterface extends JFrame
 		newElement.addMouseListener(this);
 		return newElement;
 		
+	}
+
+	@Override
+	public void focusGained(FocusEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void focusLost(FocusEvent arg0) 
+	{
+		String id = "|" + arg0.getComponent().getName() + "|";
+		int startOfNote = idInCart.lastIndexOf(id);
+		startOfNote += id.length() + 1;
+		int endOfNote = idInCart.indexOf("|", startOfNote) - 1;
+		String textEdited = ((JTextField) arg0.getComponent()).getText();
+		String temp = idInCart.substring(0, startOfNote) + textEdited + idInCart.substring(endOfNote);
+ 		idInCart = temp;
+ 		Product product = 
+				(Product) filteredList.search(Integer.parseInt(arg0.getComponent().getName()));
+		product.clientNote = textEdited;
+		product = (Product) productsList.search(Integer.parseInt(arg0.getComponent().getName()));
+		product.clientNote = textEdited;
+		saveCartFile();
 	}
 	
 }

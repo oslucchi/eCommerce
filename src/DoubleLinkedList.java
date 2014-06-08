@@ -449,7 +449,8 @@ public class DoubleLinkedList implements Serializable
 		while(current != root)
 		{
 			Product item = (Product) current.getData();
-			if (item.descriptionShort.contains(searchFor) ||
+			if ((searchFor.compareTo("") == 0) ||
+				item.descriptionShort.contains(searchFor) ||
 				item.descriptionLong.contains(searchFor) ||
 				item.title.contains(searchFor))
 			{
