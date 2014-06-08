@@ -405,7 +405,7 @@ public class DoubleLinkedList implements Serializable
 		while(current.next != root)
 		{
 			swap = current.getNext();
-			while(swap.next != root)
+			while(swap != root)
 			{
 				if (sortBy == 0)
 				{
@@ -442,4 +442,23 @@ public class DoubleLinkedList implements Serializable
 		return(null);
 	}
 
+	public DoubleLinkedList filter(String searchFor)
+	{
+		DoubleLinkedList results = new DoubleLinkedList();
+		DoubleLinkedListElement current = root.getNext();
+		while(current != root)
+		{
+			Product item = (Product) current.getData();
+			if (item.descriptionShort.contains(searchFor) ||
+				item.descriptionLong.contains(searchFor) ||
+				item.title.contains(searchFor))
+			{
+				results.insertTail(item);
+			}
+					
+			current = current.next;
+		}
+		return results;
+		
+	}
 }
