@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.RenderingHints;
@@ -17,6 +16,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -53,7 +53,7 @@ import javax.swing.JTextField;
 
 public class UserInterface extends JFrame 
 						   implements ActionListener, WindowStateListener, 
-						   			  MouseListener, FocusListener
+						   			  MouseListener, FocusListener, WindowListener
 {
 
 	/**
@@ -111,7 +111,9 @@ public class UserInterface extends JFrame
 	@Override
 	public void windowStateChanged(WindowEvent e) 
 	{
-		if (e.getNewState() == WindowEvent.WINDOW_CLOSED)
+		System.out.println(e.getComponent().getName() + " " + e.getNewState());
+		if ((e.getComponent().getName().compareTo("main") == 0) &&
+			 e.getNewState() == WindowEvent.WINDOW_CLOSED)
 			System.exit(0);
 	}
 
@@ -306,7 +308,9 @@ public class UserInterface extends JFrame
 			
 		case SHOWCART:
 		    cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
+		    cart.addWindowListener(this);
 		    cart.setTitle("cart");
+		    cart.setName("cart");
 		    cart.setLayout(new BorderLayout());
 		    JPanel buttonPanel = new JPanel();
 		    cartCont.setPreferredSize(getMinimumSize());
@@ -314,18 +318,16 @@ public class UserInterface extends JFrame
 		    DoubleLinkedList selected = filteredList;
 		    selected.first();
 		    Product node = null;
-		    JPanel leftCartCont = new JPanel();
-		    JPanel rightCartCont = new JPanel();
 		    while((node = (Product) selected.current()) != null)
 		    {
 		    	if (node != null && node.selected)
 		    	{
-		    		leftCartCont.add(cartElement(node));
+		    		cartCont.add(cartElement(node));
 		    	}
 		    	selected.next();
 		    }
-		    cartCont.add(leftCartCont);
-		    cartCont.add(rightCartCont);
+//		    cartCont.add(leftCartCont);
+//		    cartCont.add(rightCartCont);
 		    JScrollPane scroller = new JScrollPane();
 		    scroller.setViewportView(cartCont);
 		    JLabel textBoxName = new JLabel("Enter your Credentials ");
@@ -371,7 +373,7 @@ public class UserInterface extends JFrame
 		    		}
 		 
 		    		// true = append file
-		    		FileWriter fileWriter = new FileWriter(file.getName(), true);
+		    		FileWriter fileWriter = new FileWriter(file.getAbsolutePath(), true);
 	    	        BufferedWriter bufferWriter = new BufferedWriter(fileWriter);
 	    	        String line = "Order submitted on " + date + "\n";
 	    	        bufferWriter.write(line);
@@ -383,7 +385,7 @@ public class UserInterface extends JFrame
 						Product p = (Product) productsList.search(id);
 						line = "  Articolo " + p.getId() + " - Title " + p.title + " - Price " + p.price + "\n";
 						bufferWriter.write(line);
-						line = "  Client notes: \n" + p.clientNote + "\n\n";
+						line = "  Client notes: \n    -> " + p.clientNote + "\n\n";
 						bufferWriter.write(line);
 						// remove from virtual cart
 						p.selected = false;
@@ -395,7 +397,7 @@ public class UserInterface extends JFrame
 		    	}
 		    	catch(IOException e1)
 		    	{
-		    		// TODO: hadnle exception{
+		    		// TODO: handle exception{
 		    	}
 				idInCart = "|";
 				saveCartFile();
@@ -658,6 +660,7 @@ public class UserInterface extends JFrame
 		
 		setTitle("eCommerce");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setName("main");
 				
 	    // Creating menu bar and related menu items and subitems.
         JMenu mFile = new JMenu("File");
@@ -830,5 +833,50 @@ public class UserInterface extends JFrame
 	    g2d.drawImage(image, 0, 0, width, height, null);
 	    g2d.dispose();
 	    return bi;
+	}
+
+	@Override
+	public void windowOpened(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowClosing(WindowEvent e) 
+	{
+		if (e.getComponent().getName().compareTo("cart") == 0)
+		{
+			cartCont.removeAll();
+			cartCont.validate();
+			cartCont.repaint();	
+		}
+	}
+
+	@Override
+	public void windowClosed(WindowEvent e) {
+	}
+
+	@Override
+	public void windowIconified(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowDeiconified(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowActivated(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowDeactivated(WindowEvent e) {
+		// TODO Auto-generated method stub
+		
 	}
 }
