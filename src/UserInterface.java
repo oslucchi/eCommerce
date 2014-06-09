@@ -5,7 +5,9 @@ import java.awt.Container;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -29,11 +31,15 @@ import java.io.InputStreamReader;
 import java.util.Date;
 
 import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.GroupLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -86,6 +92,7 @@ public class UserInterface extends JFrame
     private JButton showCart = new JButton("Show cart");
     private JButton filter = new JButton("Filter");
     private JButton checkOut = new JButton("Checkout");
+    
     private JTextField filterText = new JTextField("", 15);
 	private String[] choiches = {"category", "price"};
     private JComboBox comboBox = new JComboBox(choiches);
@@ -278,6 +285,7 @@ public class UserInterface extends JFrame
 			{
 				currentPage = filteredList.getNextPage();
 				drawItemList();
+				listScroller.validate();
 				listScroller.repaint();
 			}
 			previousPage.setEnabled(filteredList.hasPrevPage());
@@ -289,6 +297,7 @@ public class UserInterface extends JFrame
 			{
 				currentPage = filteredList.getPrevPage();
 				drawItemList();
+				listScroller.validate();
 				listScroller.repaint();
 			}
 			previousPage.setEnabled(filteredList.hasPrevPage());
@@ -385,6 +394,7 @@ public class UserInterface extends JFrame
 				idInCart = "|";
 				saveCartFile();
 				cartCont.removeAll();
+				cartCont.validate();
 				cartCont.repaint();
 				cart.dispose();
 				filterText.setText("");
@@ -461,11 +471,18 @@ public class UserInterface extends JFrame
 			// TODO: Deal with the exception
 			System.out.println("image " + p.getImagePathLarge() + " not found");
 		}
+		BufferedImage resizedImage = resize(img,500,497);
 		detailsContainer.removeAll();
-		detailsContainer.add(new JLabel(new ImageIcon(img)), BorderLayout.NORTH);
-		detailsContainer.add(new JLabel(p.title), BorderLayout.CENTER);
-		detailsContainer.add(new JLabel(p.descriptionLong), BorderLayout.SOUTH);
+		detailsScroller.setPreferredSize(getMinimumSize());
+		detailsContainer.setLayout(new BoxLayout(detailsContainer,BoxLayout.PAGE_AXIS));
+		detailsContainer.add(new JLabel(new ImageIcon(resizedImage)));
+		detailsContainer.add(Box.createRigidArea(new Dimension(0,20)));
+		detailsContainer.add(new JLabel(p.title));
+		detailsContainer.add(Box.createRigidArea(new Dimension(0,20)));
+		detailsContainer.add(new JLabel(p.descriptionLong));
+		
 
+		frameCont.validate();
 		frameCont.repaint();
 	}
 
@@ -604,7 +621,9 @@ public class UserInterface extends JFrame
         	itemListContainer.add(listElement(p, count++));
         	p = (Product) currentPage.next();
         }
+        itemListContainer.validate();
         itemListContainer.repaint();
+        listScroller.validate();
         listScroller.repaint();
 	}
 
@@ -794,5 +813,12 @@ public class UserInterface extends JFrame
 		product.clientNote = textEdited;
 		saveCartFile();
 	}
-	
+	public static BufferedImage resize(BufferedImage image, int width, int height) {
+	    BufferedImage bi = new BufferedImage(width, height, BufferedImage.TRANSLUCENT);
+	    Graphics2D g2d = (Graphics2D) bi.createGraphics();
+	    g2d.addRenderingHints(new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY));
+	    g2d.drawImage(image, 0, 0, width, height, null);
+	    g2d.dispose();
+	    return bi;
+	}
 }
