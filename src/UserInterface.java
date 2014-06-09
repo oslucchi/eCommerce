@@ -308,36 +308,42 @@ public class UserInterface extends JFrame
 		    cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
 		    cart.setTitle("cart");
 		    cart.setLayout(new BorderLayout());
-
 		    JPanel buttonPanel = new JPanel();
+		    cartCont.setPreferredSize(getMinimumSize());
 		    cartCont.setLayout(new BoxLayout(cartCont, BoxLayout.PAGE_AXIS));
 		    DoubleLinkedList selected = filteredList;
 		    selected.first();
 		    Product node = null;
-		    
+		    JPanel leftCartCont = new JPanel();
+		    JPanel rightCartCont = new JPanel();
 		    while((node = (Product) selected.current()) != null)
 		    {
 		    	if (node != null && node.selected)
 		    	{
-				    cartCont.add(cartElement(node));
+		    		leftCartCont.add(cartElement(node));
 		    	}
 		    	selected.next();
 		    }
+		    cartCont.add(leftCartCont);
+		    cartCont.add(rightCartCont);
 		    JScrollPane scroller = new JScrollPane();
 		    scroller.setViewportView(cartCont);
 		    JLabel textBoxName = new JLabel("Enter your Credentials ");
 		    JLabel paymentMethodLabel = new JLabel("Select payment Method ");
+		   
 		    buttonPanel.add(paymentMethodLabel);
 		    buttonPanel.add(paymentMethod);
 		    buttonPanel.add(textBoxName);
 		    buttonPanel.add(nameOfBuyer);
 		    buttonPanel.add(checkOut);
 		    
-		    cart.add(scroller, BorderLayout.NORTH);	 
+		    cart.add(scroller, BorderLayout.CENTER);	 
 		    cart.add(buttonPanel, BorderLayout.SOUTH);
 		    cart.setSize(400, 700);
 		    cart.setVisible(true);
-		    break;
+		    
+		    
+		        break;
 		
 		
 		case FILTER:
@@ -434,8 +440,10 @@ public class UserInterface extends JFrame
 	
 	private JPanel cartElement(Product node)
 	{
-		JPanel itemInCart = new JPanel();
-		itemInCart.setLayout(new GridLayout(1, 4));
+		JPanel newCartElement = new JPanel();
+		JPanel leftCartPart = new JPanel();
+		JPanel rightCartPart = new JPanel();
+		rightCartPart.setLayout(new GridLayout(4,1));
 		BufferedImage img = null;
 		try 
 		{
@@ -445,15 +453,17 @@ public class UserInterface extends JFrame
 		{
 			// TODO: Deal with the exception
 		}
-		itemInCart.add(new JLabel(new ImageIcon(img)));
-		itemInCart.add(new JLabel(node.title));
-		itemInCart.add(new JLabel(String.valueOf(node.price)));
-		cartItemNote = new JTextField(node.clientNote, 40);
+		leftCartPart.add(new JLabel(new ImageIcon(img)));
+		rightCartPart.add(new JLabel(node.title));
+		rightCartPart.add(new JLabel(String.valueOf(node.price)));
+		cartItemNote = new JTextField(node.clientNote,20);
 		cartItemNote.addFocusListener(this);
 		cartItemNote.setName(String.valueOf(node.getId()));
-		itemInCart.add(cartItemNote);
-		itemInCart.setName(String.valueOf(node.getId()));
-		return itemInCart;
+		rightCartPart.add(cartItemNote);
+		newCartElement.setName(String.valueOf(node.getId()));
+		newCartElement.add(leftCartPart);
+		newCartElement.add(rightCartPart);
+		return newCartElement;
 	}
 
 	@Override
