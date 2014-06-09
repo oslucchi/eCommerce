@@ -82,7 +82,7 @@ public class UserInterface extends JFrame
     JPanel itemListContainer = new JPanel();
     JPanel detailsContainer = new JPanel();
     JPanel cartCont = new JPanel();
-    JPanel orderPanel = new JPanel();
+    JPanel orderPanel;
     JScrollPane listScroller = new JScrollPane();
     JScrollPane detailsScroller = new JScrollPane();
     JDialog cart;
@@ -343,12 +343,9 @@ public class UserInterface extends JFrame
 		    cart.add(scroller, BorderLayout.CENTER);	 
 		    cart.add(buttonPanel, BorderLayout.SOUTH);
 		    cart.setSize(400, 700);
-		    cart.setVisible(true);
-		    
-		    
-		        break;
-		
-		
+		    cart.setVisible(true);		    
+		    break;
+			
 		case FILTER:
 			filteredList = productsList.filter(filterText.getText());
 			filteredList.initPageManager(10);
@@ -420,50 +417,71 @@ public class UserInterface extends JFrame
 				JOptionPane.showMessageDialog(null,"Please enter your credentials and select payment method");				
 			}
 			break;
+			
 		case ORDERHISTORY:
 			orderHistory = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
-			orderHistory.addWindowListener(this);
+			orderHistory.setName("orderHistory");
 			orderHistory.setTitle("Order History");
 			orderHistory.setLayout(new BorderLayout());
+			orderHistory.addWindowListener(this);
+
+			orderPanel = new JPanel();
 			orderPanel.setLayout(new BoxLayout(orderPanel, BoxLayout.PAGE_AXIS));
-			JTextArea textArea = new JTextArea(5, 20);
+			
+			JTextArea textArea = new JTextArea();
 			textArea.setEditable(false);
+			
 			JScrollPane orderScroller = new JScrollPane();
 			orderScroller.setViewportView(orderPanel);
-			JLabel orders = new JLabel(" all orders made up to now");
-			orderPanel.add(orders);
-			orderHistory.add(orderScroller, BorderLayout.NORTH);	 
-		    orderHistory.add(orderPanel, BorderLayout.SOUTH);
-		    try
-		    {
-		        FileReader fileReader = new FileReader("checkedoutOrdersHistory.txt");
-		        @SuppressWarnings("resource")
-				BufferedReader bufferedReader = new BufferedReader(fileReader);
+			orderHistory.add(orderScroller, BorderLayout.CENTER);
+			
+			// Read order history file and put in the dialog text area
+			FileReader fileReader = null;
+			BufferedReader bufferedReader = null;
+			try
+			{
+				fileReader = new FileReader("data/checkedoutOrdersHistory.txt");
+				bufferedReader = new BufferedReader(fileReader);
 
-		        String inputFile = "";
-		        String textFieldReadable = bufferedReader.readLine();
-
-		        while (textFieldReadable != null)
-		        {
-		            inputFile += textFieldReadable;
-		            textFieldReadable = bufferedReader.readLine();   
-		            textArea.append(inputFile);
-		            textArea.setLineWrap(true);
-		            orderHistory.add(textArea);
-		        }
-		    }
-		     catch (FileNotFoundException ex) 
-		     {
-		    	    System.out.println("no such file exists");
-		     } 
-		    catch (IOException e1)
-		    {
+				String textFieldReadable ;
+				while ((textFieldReadable = bufferedReader.readLine()) != null)
+				{
+					textArea.append(textFieldReadable + "\n");
+				}
+				textArea.setLineWrap(true);
+				orderPanel.add(textArea);
+			}
+			catch (FileNotFoundException ex) 
+			{
+				System.out.println("no such file exists");
+			} 
+			catch (IOException e1)
+			{
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-		}
-			orderHistory.setSize(400, 700);
+			
+			try 
+			{
+				fileReader.close();
+			}
+			catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			try 
+			{
+				bufferedReader.close();
+			}
+			catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			orderHistory.setSize(450, 600);
+			// textArea.setMinimumSize(new Dimension(orderHistory.getWidth() - 15, orderHistory.getHeight() - 15));
 			orderHistory.setVisible(true);
+		}
 	}
 	
 	private JPanel cartElement(Product node)
@@ -876,7 +894,7 @@ public class UserInterface extends JFrame
 			cartCont.validate();
 			cartCont.repaint();	
 		}
-		else if (e.getComponent().getName().compareTo("orderHistory ")==0);
+		else if (e.getComponent().getName().compareTo("orderHistory") == 0)
 		{
 			orderHistory.removeAll();
 			orderHistory.validate();
