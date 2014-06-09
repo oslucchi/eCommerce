@@ -7,6 +7,7 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.RenderingHints;
+import java.awt.TextArea;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -25,6 +26,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -49,6 +51,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 public class UserInterface extends JFrame 
@@ -326,8 +329,6 @@ public class UserInterface extends JFrame
 		    	}
 		    	selected.next();
 		    }
-//		    cartCont.add(leftCartCont);
-//		    cartCont.add(rightCartCont);
 		    JScrollPane scroller = new JScrollPane();
 		    scroller.setViewportView(cartCont);
 		    JLabel textBoxName = new JLabel("Enter your Credentials ");
@@ -421,23 +422,48 @@ public class UserInterface extends JFrame
 			break;
 		case ORDERHISTORY:
 			orderHistory = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
+			orderHistory.addWindowListener(this);
 			orderHistory.setTitle("Order History");
 			orderHistory.setLayout(new BorderLayout());
 			orderPanel.setLayout(new BoxLayout(orderPanel, BoxLayout.PAGE_AXIS));
+			JTextArea textArea = new JTextArea(5, 20);
+			textArea.setEditable(false);
 			JScrollPane orderScroller = new JScrollPane();
 			orderScroller.setViewportView(orderPanel);
 			JLabel orders = new JLabel(" all orders made up to now");
 			orderPanel.add(orders);
 			orderHistory.add(orderScroller, BorderLayout.NORTH);	 
 		    orderHistory.add(orderPanel, BorderLayout.SOUTH);
-			System.out.println("file to be printed");
+		    try
+		    {
+		        FileReader fileReader = new FileReader("checkedoutOrdersHistory.txt");
+		        @SuppressWarnings("resource")
+				BufferedReader bufferedReader = new BufferedReader(fileReader);
+
+		        String inputFile = "";
+		        String textFieldReadable = bufferedReader.readLine();
+
+		        while (textFieldReadable != null)
+		        {
+		            inputFile += textFieldReadable;
+		            textFieldReadable = bufferedReader.readLine();   
+		            textArea.append(inputFile);
+		            textArea.setLineWrap(true);
+		            orderHistory.add(textArea);
+		        }
+		    }
+		     catch (FileNotFoundException ex) 
+		     {
+		    	    System.out.println("no such file exists");
+		     } 
+		    catch (IOException e1)
+		    {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
 			orderHistory.setSize(400, 700);
 			orderHistory.setVisible(true);
-			
-		
-		}
-		
-			
 	}
 	
 	private JPanel cartElement(Product node)
@@ -849,6 +875,12 @@ public class UserInterface extends JFrame
 			cartCont.removeAll();
 			cartCont.validate();
 			cartCont.repaint();	
+		}
+		else if (e.getComponent().getName().compareTo("orderHistory ")==0);
+		{
+			orderHistory.removeAll();
+			orderHistory.validate();
+			orderHistory.repaint();	
 		}
 	}
 
