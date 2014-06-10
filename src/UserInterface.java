@@ -162,12 +162,19 @@ public class UserInterface extends JFrame
 	@Override
 	public void actionPerformed(ActionEvent e) 
 	{
+		// All checkbox have been named using the id of the product of the item they belong to
 		if (e.getActionCommand().compareTo("Select to buy") == 0)
 		{
+			// get all the items in the current page of the products list
 			for(int i = 0; i < itemListContainer.getComponentCount(); i++)
 			{
+				//get the panel where the checkbox is set and then get the checkbox 
+				// which is the 6th compenent of the panel
 				JPanel item = (JPanel) ((JPanel) itemListContainer.getComponent(i)).getComponent(1);
 				JCheckBox cbItem = (JCheckBox) (item.getComponent(5));
+				// based on the action taeken by the user (select/deselect) mark the product
+				// whose id is the id botained from the name of the checkbox accordignly
+				// products marked as selected will show up in the cart later
 				if (e.getSource().equals(cbItem))
 				{
 					Product itemSelected = 
@@ -207,6 +214,10 @@ public class UserInterface extends JFrame
 					
 					// Mark on the original productsList the selected status on the actioned checkbox
 					// so that on next filtering the selected status will be preserved
+					// This is because the filtered list is used to display page but we still maintain the
+					// original product list on a separate object.
+					// We need to mark the original objects too so that a new filter action will still
+					// reflect previously selected items
 					temp = productsList;
 					temp.first();
 					while(temp != null)
@@ -268,6 +279,9 @@ public class UserInterface extends JFrame
 			break;
 		
 		case COMBOSORT:
+			// Handle the sort request via change in a checkbox. A specific method of the double linked list
+			// sort the items accordingly.
+			// this applies only to the list carrying on the filtered items, not the original product list
 	        String selectedItem = (String) comboBox.getSelectedItem();
 	        if(selectedItem.compareTo("category") == 0)
 	        {
@@ -310,6 +324,8 @@ public class UserInterface extends JFrame
 			break;
 			
 		case SHOWCART:
+			// create a new dialog and show all the filtered products 
+			// this allows the user to selectively checkout items based on the filter option set
 		    cart = new JDialog(this, Dialog.ModalityType.APPLICATION_MODAL);
 		    cart.addWindowListener(this);
 		    cart.setTitle("cart");
@@ -359,6 +375,8 @@ public class UserInterface extends JFrame
 			String paymentMethodChoice = (String) paymentMethod.getSelectedItem();
 			String credentials = nameOfBuyer.getText();
 			Date date = new Date();
+			// Once the paynment method and credentials are populated proceed with checkout by saving all 
+			// items in the history file and cleaning up the selected indicator on the products list
 			if ((paymentMethodChoice.compareTo("") != 0) && (credentials != null))
 			{
 		    	try
@@ -484,6 +502,8 @@ public class UserInterface extends JFrame
 		}
 	}
 	
+	// Each element in the cart is a panel created via the following method 
+	// and named after the id of the item
 	private JPanel cartElement(Product node)
 	{
 		JPanel newCartElement = new JPanel();
@@ -512,6 +532,8 @@ public class UserInterface extends JFrame
 		return newCartElement;
 	}
 
+	// The mouseClickedmethod is invoked when a user click on the item in the main list in
+	// order to display the item's details on the right side of the window
 	@Override
 	public void mouseClicked(MouseEvent arg0) 
 	{
@@ -564,7 +586,7 @@ public class UserInterface extends JFrame
 		
 	}
 
-
+	// load data from the products file (pipe separated text file)
 	private void loadFile() throws InternalExceptions
 	{
         String exception = null;
@@ -572,7 +594,7 @@ public class UserInterface extends JFrame
     	boolean noRecordsFound = true;
     	BufferedReader br = null; 
 
-    	// Read ids contained in cart from cart file
+    	// Get the previously selected items and their notes from cart file
 		File file = new File("data/cart.dat");
 		FileInputStream fis = null;
 		idInCart = "";
@@ -600,6 +622,9 @@ public class UserInterface extends JFrame
 				ex.printStackTrace();
 			}
 		}
+		
+		// get all the products from the products.dat file and mark them as 
+		// selected. Also add notes eventually present in the cart file
     	productsList = new DoubleLinkedList();
 		showCart.setEnabled(false);
     	try
@@ -613,6 +638,8 @@ public class UserInterface extends JFrame
 				try 
 				{
 					Product p = new Product(record);
+					// check if the products was selected on a previous run of the application
+					// and mark it accordingly
 					if (idInCart.contains("|" + String.valueOf(p.getId()) + "|"))
 					{
 						p.selected = true;
@@ -666,6 +693,7 @@ public class UserInterface extends JFrame
 		filteredList = productsList.filter("");
 	}
 	
+	// this method is to fill the panel with the item list
 	private void drawItemList()
 	{
 		itemListContainer.removeAll();
@@ -683,6 +711,7 @@ public class UserInterface extends JFrame
         listScroller.repaint();
 	}
 
+	// instantiate and set all the controls as needed to start the UI
 	public UserInterface(String srcPath)
 	{
         try
@@ -802,6 +831,7 @@ public class UserInterface extends JFrame
         this.setLocation(WIDTH / 4, WIDTH / 4);        
 	}
 	
+	// Create a ponel containing the product to show in the main product list
 	public JPanel listElement(Product node, int position)
 	{
 		JLabel title = new JLabel("Title: " + node.title);
@@ -853,6 +883,7 @@ public class UserInterface extends JFrame
 		
 	}
 
+	// WHen a text note in the cart dialog lost focus, save the note in the cart file accordingly
 	@Override
 	public void focusLost(FocusEvent arg0) 
 	{
